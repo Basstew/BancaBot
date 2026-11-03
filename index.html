@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BancaBot: Automatizaciones bancarias</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            blue: '#0284c7',
+                            lightBlue: '#38bdf8',
+                            emerald: '#059669',
+                            amber: '#d97706',
+                            tg: '#0088cc'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b;
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Card hover micro-interactions */
+        .pro-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .pro-card:hover {
+            border-color: #0284c7;
+            box-shadow: 0 12px 28px -6px rgba(2, 132, 199, 0.15);
+            transform: translateY(-3px);
+        }
+
+        /* Calculator Active vs Inactive Card Selection States */
+        .rate-card-active {
+            background-color: #f0f9ff !important;
+            border: 2px solid #0284c7 !important;
+            box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.2), 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+            opacity: 1 !important;
+        }
+        .rate-card-inactive {
+            background-color: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: none !important;
+            opacity: 0.75 !important;
+        }
+        .rate-card-inactive:hover {
+            opacity: 1 !important;
+            border-color: #94a3b8 !important;
+        }
+    </style>
+</head>
+<body class="selection:bg-sky-500 selection:text-white">
+
+    <!-- Top Ticker Bar: Purely USD (BCV Base, Intervención +0.50% & Binance P2P USDT) -->
+    <div class="bg-slate-100 border-b border-slate-200 text-slate-700 py-2.5 px-4 text-xs">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2.5 font-mono">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 text-[11px]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                    TASAS EN VIVO
+                </span>
+                
+                <span id="ticker-bcv-usd" class="text-slate-700">
+                    USD BCV: <strong class="text-slate-900 font-bold">Cargando...</strong>
+                </span>
+
+                <span class="text-slate-300">•</span>
+
+                <span id="ticker-intervencion-usd" class="text-sky-900 font-bold bg-sky-50 px-2.5 py-0.5 rounded-md border border-sky-300">
+                    Intervención (+0.50%): <strong class="text-sky-700 font-extrabold">Cargando...</strong>
+                </span>
+
+                <span class="text-slate-300">•</span>
+
+                <span id="ticker-binance-p2p" class="text-amber-900 font-medium bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                    Binance P2P (USDT): <strong class="text-amber-800 font-bold">Cargando...</strong>
+                </span>
+
+                <span id="ticker-brecha" class="text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200 hidden md:inline-block">
+                    Brecha: <strong class="text-emerald-700 font-black">Cargando...</strong>
+                </span>
+            </div>
+
+            <a href="https://t.me/Basstew" target="_blank" class="text-sky-700 hover:text-sky-800 hover:underline font-bold text-xs flex items-center gap-1.5 transition">
+                <i class="fa-brands fa-telegram text-sm text-[#0088cc]"></i>
+                <span>Hablar con Basstew</span>
+                <span>→</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-11 h-11 rounded-xl bg-sky-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-sky-600/20 group-hover:bg-sky-500 transition">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-2xl font-extrabold tracking-tight text-slate-900">Banca<span class="text-sky-600">Bot</span></span>
+                    <span class="text-[10px] uppercase tracking-widest text-slate-500 font-bold">By Basstew • Creador Oficial</span>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+                <a href="#calculadora" class="text-sky-600 hover:text-sky-800 transition flex items-center gap-1.5 font-bold">
+                    <i class="fa-solid fa-calculator text-xs"></i> Calculadora
+                </a>
+                <a href="#carrera" class="hover:text-sky-600 transition">Humano vs Bot</a>
+                <a href="#bancos" class="hover:text-sky-600 transition">Bancos</a>
+                <a href="#como-funciona" class="hover:text-sky-600 transition">Cómo Funciona</a>
+                <a href="#comprar" class="hover:text-sky-600 transition">Licencias</a>
+                <a href="#garantia" class="hover:text-sky-600 transition">Garantía</a>
+            </nav>
+
+            <!-- Telegram CTA Button -->
+            <div class="flex items-center gap-3">
+                <a href="https://t.me/Basstew" target="_blank" class="bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-md shadow-[#0088cc]/20 flex items-center gap-2">
+                    <i class="fa-brands fa-telegram text-base"></i>
+                    <span>Contactar a Basstew</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section with High-Converting Hooks -->
+    <section class="relative pt-16 pb-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            
+            <!-- Value Hook Pill -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm font-bold mb-6 shadow-sm">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                <span>El bot se paga solo en tu primera compra exitosa a tasa oficial</span>
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-tight max-w-5xl mx-auto">
+                Banca<span class="text-sky-600">Bot</span>: Automatizaciones bancarias
+            </h1>
+            <p class="text-xl sm:text-2xl font-bold text-slate-700 mt-4 max-w-3xl mx-auto leading-snug">
+                No pagues sobreprecio informal. Compra divisas a tasa oficial en segundos antes de que se agoten los fondos.
+            </p>
+
+            <p class="text-slate-600 text-lg sm:text-xl font-normal mt-6 max-w-3xl mx-auto leading-relaxed">
+                Los cupos de intervención se agotan en menos de 60 segundos. Mientras otros intentan entrar manualmente con páginas colgadas, <strong>BancaBot detecta la apertura bancaria y ejecuta tu orden en milisegundos</strong>.
+            </p>
+
+            <!-- Main CTA Buttons -->
+            <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="#comprar" class="w-full sm:w-auto bg-sky-600 hover:bg-sky-500 text-white font-bold px-8 py-4 rounded-xl text-base shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2.5 transition">
+                    <i class="fa-solid fa-cart-shopping text-base"></i>
+                    <span>Adquirir Licencia (Desde 30 USDT)</span>
+                </a>
+                <a href="#calculadora" class="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 font-bold px-8 py-4 rounded-xl text-base border border-slate-300 shadow-sm flex items-center justify-center gap-2.5 transition">
+                    <i class="fa-solid fa-calculator text-sky-600 text-base"></i>
+                    <span>Calcular Ahorro en Vivo</span>
+                </a>
+            </div>
+
+            <!-- Conversion Guarantees / Proof Pills -->
+            <div class="mt-12 flex flex-wrap items-center justify-center gap-4 text-xs sm:text-sm font-semibold text-slate-700">
+                <span class="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-sm">
+                    <i class="fa-solid fa-piggy-bank text-emerald-600 text-lg"></i> Ahorras cientos de dólares vs. mercado paralelo
+                </span>
+                <span class="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-sm">
+                    <i class="fa-solid fa-bolt text-amber-500 text-lg"></i> Respuesta en &lt; 0.5s (Entras antes que colapse el banco)
+                </span>
+                <span class="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-xl shadow-sm">
+                    <i class="fa-solid fa-user-shield text-sky-600 text-lg"></i> Acompañamiento personal 1 a 1 por Basstew
+                </span>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- LIVE BCV INTERVENTION CALCULATOR (WITH LIVE NET SAVINGS VS PARALELO CALCULATOR - IDEA 1) -->
+    <section id="calculadora" class="py-16 bg-white border-y border-slate-200">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            
+            <div class="text-center mb-10">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                    API Oficial BCV en Vivo
+                </div>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900">Calculadora de Intervención y Ahorro Real</h2>
+                <p class="text-slate-600 text-sm sm:text-base mt-2 max-w-xl mx-auto">
+                    Comprueba cuánto dinero en Bolívares necesitas y <strong>cuánto dinero te ahorras en Dólares</strong> en comparación con comprar en el mercado informal:
+                </p>
+            </div>
+
+            <!-- Main Interactive Calculator Container -->
+            <div class="rounded-3xl bg-slate-50 border border-slate-200 p-6 sm:p-8 shadow-xl shadow-slate-200/50">
+                
+                <!-- Dual Interactive Rate Cards (USD Intervención vs USD BCV Base) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
+                    
+                    <!-- Option 1: Tasa Intervención (+0.50%) - ACTIVE BY DEFAULT -->
+                    <button type="button" id="btn-mode-intervencion" onclick="setRateMode('intervencion')" class="rate-card-active p-5 rounded-2xl text-left flex items-center justify-between transition cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div id="icon-container-intervencion" class="w-12 h-12 rounded-xl bg-sky-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-sky-600/30">
+                                <i class="fa-solid fa-building-columns"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-sky-900 font-extrabold uppercase tracking-wider block">Tasa Intervención</span>
+                                    <span class="bg-sky-200 text-sky-900 text-[10px] font-black px-2 py-0.5 rounded border border-sky-300">+0.50%</span>
+                                </div>
+                                <span id="rate-display-intervencion" class="text-2xl font-black text-slate-900 font-mono mt-0.5 block">Cargando...</span>
+                            </div>
+                        </div>
+                        <span id="badge-intervencion" class="text-xs font-black bg-sky-600 text-white px-3 py-1.5 rounded-lg uppercase shadow-sm">
+                            ✓ Seleccionada
+                        </span>
+                    </button>
+
+                    <!-- Option 2: Tasa BCV Oficial Base - INACTIVE BY DEFAULT -->
+                    <button type="button" id="btn-mode-bcv" onclick="setRateMode('bcv')" class="rate-card-inactive p-5 rounded-2xl text-left flex items-center justify-between transition cursor-pointer">
+                        <div class="flex items-center gap-4">
+                            <div id="icon-container-bcv" class="w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl font-bold">
+                                <i class="fa-solid fa-dollar-sign"></i>
+                            </div>
+                            <div>
+                                <span class="text-xs text-slate-500 font-bold uppercase tracking-wider block">Tasa BCV Base (+0%)</span>
+                                <span id="rate-display-bcv" class="text-2xl font-bold text-slate-700 font-mono mt-0.5 block">Cargando...</span>
+                            </div>
+                        </div>
+                        <span id="badge-bcv" class="text-xs font-bold bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg uppercase hidden">
+                            Seleccionar
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Calculator Form Controls -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                    
+                    <!-- Left: Input Controls (7 cols) -->
+                    <div class="lg:col-span-7 space-y-6">
+                        <div>
+                            <label class="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center justify-between mb-2">
+                                <span>Monto en Dólares ($ USD) que vas a comprar:</span>
+                                <span class="text-sky-700 font-bold font-mono">Dólares USD</span>
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-sky-600 font-mono">$</span>
+                                <input type="number" id="calc-amount-input" value="500" min="1" step="50" 
+                                    oninput="calculateTotal()" 
+                                    class="w-full bg-white border-2 border-slate-300 focus:border-sky-600 text-slate-900 text-3xl font-black pl-12 pr-4 py-3.5 rounded-2xl outline-none font-mono transition shadow-inner">
+                            </div>
+                        </div>
+
+                        <!-- Fast Presets Buttons (100 a 1000) -->
+                        <div>
+                            <span class="text-xs text-slate-500 font-bold block mb-2">Montos Rápidos (100 a 1,000):</span>
+                            <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                                <button type="button" onclick="setPreset(100)" data-amount="100" class="preset-btn py-2.5 px-3 rounded-xl bg-white hover:bg-sky-600 hover:text-white border border-slate-200 text-slate-700 font-bold text-xs font-mono transition shadow-sm">100</button>
+                                <button type="button" onclick="setPreset(200)" data-amount="200" class="preset-btn py-2.5 px-3 rounded-xl bg-white hover:bg-sky-600 hover:text-white border border-slate-200 text-slate-700 font-bold text-xs font-mono transition shadow-sm">200</button>
+                                <button type="button" onclick="setPreset(300)" data-amount="300" class="preset-btn py-2.5 px-3 rounded-xl bg-white hover:bg-sky-600 hover:text-white border border-slate-200 text-slate-700 font-bold text-xs font-mono transition shadow-sm">300</button>
+                                <button type="button" onclick="setPreset(400)" data-amount="400" class="preset-btn py-2.5 px-3 rounded-xl bg-white hover:bg-sky-600 hover:text-white border border-slate-200 text-slate-700 font-bold text-xs font-mono transition shadow-sm">400</button>
+                                <button type="button" onclick="setPreset(500)" data-amount="500" class="preset-btn py-2.5 px-3 rounded-xl bg-sky-600 text-white font-black text-xs font-mono transition shadow-md">500</button>
+                                <button type="button" onclick="setPreset(1000)" data-amount="1000" class="preset-btn py-2.5 px-3 rounded-xl bg-white hover:bg-sky-600 hover:text-white border border-slate-200 text-slate-700 font-bold text-xs font-mono transition shadow-sm">1,000</button>
+                            </div>
+                        </div>
+
+                        <!-- Selector de Banco y Comisión de Tarjeta Internacional (Cuentas exactas de arbitraje) -->
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-bold uppercase tracking-wider text-slate-700">
+                                    Banco de Operación (Comisión Tarjeta):
+                                </label>
+                                <span id="label-card-fee-applied" class="text-[11px] font-black text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                                    2.5% Comisión
+                                </span>
+                            </div>
+                            <select id="calc-card-fee" onchange="calculateTotal()" class="w-full bg-slate-50 hover:bg-slate-100 border border-slate-300 focus:border-sky-600 text-slate-800 text-xs sm:text-sm font-semibold py-2.5 px-3 rounded-xl outline-none cursor-pointer transition">
+                                <option value="0.025" selected>Banco de Venezuela (BDV), Tesoro, BDT (2.5% Master Débito)</option>
+                                <option value="0.015">BBVA Provincial, BNC (1.5% Tarjeta Internacional)</option>
+                                <option value="0.048">Bancamiga (4.8% Débito Internacional)</option>
+                                <option value="0.0055">Banco Mercantil (0.55% Mercantil Panamá / Zinli)</option>
+                                <option value="0">Sin Tarjeta / Retiro Físico en Taquilla (0.0% Comisión)</option>
+                            </select>
+                            <span class="text-[11px] text-slate-500 block leading-tight">
+                                Descuenta la comisión real exacta de tarjeta al fondear Binance para mostrar tu ganancia limpia.
+                            </span>
+                        </div>
+
+                        <!-- Live Status Indicator -->
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <i class="fa-solid fa-clock-rotate-left text-sky-600"></i>
+                            <span>Última sincronización con BCV: </span>
+                            <span id="calc-updated-at" class="font-mono text-slate-800 font-semibold">Consultando...</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Results Card Display (Light Tones) -->
+                    <div class="lg:col-span-5 bg-white p-7 rounded-3xl border-2 border-sky-300 shadow-xl shadow-sky-500/10 relative">
+                        <div class="text-xs uppercase font-extrabold tracking-wider text-slate-600 mb-2 flex items-center justify-between">
+                            <span>Total a Debitar en Cuenta</span>
+                            <span id="badge-mode-applied" class="bg-sky-100 text-sky-800 text-[11px] font-black px-2.5 py-0.5 rounded-full border border-sky-300">
+                                Intervención (+0.50%)
+                            </span>
+                        </div>
+
+                        <!-- Big Result in Bolívares -->
+                        <div class="my-4 p-4 rounded-2xl bg-sky-50/80 border border-sky-200">
+                            <span class="text-xs text-slate-600 font-bold block mb-1">Bolívares Necesarios:</span>
+                            <div id="calc-result-bs" class="text-3xl sm:text-4xl font-black text-slate-900 font-mono tracking-tight leading-none break-words">
+                                Bs. 0,00
+                            </div>
+                        </div>
+
+                        <!-- Breakdown Details -->
+                        <div class="space-y-2 border-t border-slate-200 pt-3 text-xs font-medium">
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Tasa aplicada:</span>
+                                <span id="calc-result-rate" class="font-mono font-bold text-sky-700 text-sm">Bs. --</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-600">
+                                <span>Monto en Dólares:</span>
+                                <span id="calc-result-divisas" class="font-mono font-black text-slate-900 text-sm">--</span>
+                            </div>
+                        </div>
+
+                        <!-- GANANCIA REAL DE ARBITRAJE VS BINANCE P2P (CUENTAS EXACTAS CON DESCUENTO DE TARJETA) -->
+                        <div class="mt-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs">
+                            <div class="flex items-center justify-between font-black text-emerald-800 mb-2">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-coins text-sm text-emerald-600"></i>
+                                    <span>Ganancia Real Arbitraje (Venta P2P):</span>
+                                </span>
+                                <span id="calc-brecha-badge" class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded border border-emerald-300">
+                                    +12.8% Brecha
+                                </span>
+                            </div>
+                            
+                            <div class="space-y-1.5 border-y border-emerald-200/80 py-2.5 my-2 font-medium">
+                                <div class="flex justify-between items-center text-slate-700">
+                                    <span>Tasa Binance P2P (en vivo):</span>
+                                    <span id="calc-binance-rate" class="font-mono font-bold text-slate-900">Bs. 1.008,95 / USDT</span>
+                                </div>
+                                <div class="flex justify-between items-center text-slate-700">
+                                    <span>Llegan a Binance (desc. tarjeta):</span>
+                                    <span id="calc-neto-binance" class="font-mono font-bold text-slate-900">487.50 USDT</span>
+                                </div>
+                                <div class="flex justify-between items-center text-slate-700">
+                                    <span>Retorno vendido en Binance P2P:</span>
+                                    <span id="calc-retorno-p2p" class="font-mono text-slate-800">Bs. 491.863,13</span>
+                                </div>
+                                <div class="flex justify-between items-center text-emerald-800 font-bold pt-1 border-t border-emerald-200/50">
+                                    <span>Ganancia Neta en Bolívares:</span>
+                                    <span id="calc-savings-bs" class="font-mono font-black text-emerald-700">+Bs. 44.082,67</span>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-baseline pt-1">
+                                <span class="font-bold text-slate-800">Ganancia Neta Limpia ($ USDT):</span>
+                                <span id="calc-savings-usd" class="font-black text-xl text-emerald-700 font-mono">+$43,69 USDT</span>
+                            </div>
+                            <p id="calc-savings-hook" class="text-[11px] text-emerald-900 mt-2.5 font-semibold leading-tight bg-emerald-100/70 p-2.5 rounded-xl border border-emerald-200">
+                                ✨ <strong>¡Con esta sola operación te ganas +$44 USDT limpios!</strong> Pagas la licencia de 30 USDT y te queda ganancia en mano.
+                            </p>
+                        </div>
+
+                        <!-- DUAL ACTIONS: COPIAR MONTO & COMPARTIR EN WHATSAPP (IDEA 2) -->
+                        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button type="button" id="btn-copy-amount" onclick="copyResultAmount()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 px-3 rounded-xl text-center text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition active:scale-98 cursor-pointer">
+                                <i class="fa-regular fa-copy text-base"></i>
+                                <span id="btn-copy-text">Copiar Monto en Bs.</span>
+                            </button>
+                            <button type="button" id="btn-share-whatsapp" onclick="shareCalculationWhatsApp()" class="w-full bg-[#25D366] hover:bg-[#20ba5a] text-white font-bold py-3.5 px-3 rounded-xl text-center text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#25D366]/20 transition active:scale-98 cursor-pointer">
+                                <i class="fa-brands fa-whatsapp text-lg"></i>
+                                <span>Compartir en WhatsApp</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- IDEA 2: LA CARRERA DE LOS 60 SEGUNDOS (HUMANO VS. BANCABOT) -->
+    <section id="carrera" class="py-20 bg-slate-100 border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-sky-700 font-extrabold uppercase tracking-widest text-xs bg-sky-100 px-3.5 py-1 rounded-full border border-sky-300">
+                    La Carrera de los 60 Segundos
+                </span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-3">¿Por qué un humano no puede competir contra BancaBot?</h2>
+                <p class="text-slate-600 mt-2 text-base">
+                    En las intervenciones bancarias no gana quien tenga más dinero, sino quien <strong>ejecuta en los primeros milisegundos</strong> antes de que se agoten los fondos asignados al banco:
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+                
+                <!-- Columna 1: El intento Manual (Fracaso habitual) -->
+                <div class="pro-card p-8 rounded-3xl border-2 border-slate-300 bg-white">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-200">
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-lg">
+                            <i class="fa-solid fa-user-xmark"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900">Operador Manual</h3>
+                            <span class="text-xs text-rose-600 font-bold">● Lento, vulnerable a caídas de web</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 relative pl-6 border-l-2 border-slate-200 text-sm">
+                        
+                        <!-- Timeline Step 1 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-slate-300 border-2 border-white"></span>
+                            <span class="text-xs font-mono font-bold text-slate-400">Segundo 00:00</span>
+                            <p class="text-slate-700 font-medium mt-0.5">El banco abre la ventana de intervención cambiaria.</p>
+                        </div>
+
+                        <!-- Timeline Step 2 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-amber-400 border-2 border-white"></span>
+                            <span class="text-xs font-mono font-bold text-amber-600">Segundo 00:15</span>
+                            <p class="text-slate-700 font-medium mt-0.5">Refresca manualmente. La página se queda en blanco por la saturación de miles de usuarios al mismo tiempo.</p>
+                        </div>
+
+                        <!-- Timeline Step 3 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-amber-500 border-2 border-white"></span>
+                            <span class="text-xs font-mono font-bold text-amber-700">Segundo 00:35</span>
+                            <p class="text-slate-700 font-medium mt-0.5">Logra ver el formulario, escribe el monto y espera el SMS de confirmación que tarda en llegar.</p>
+                        </div>
+
+                        <!-- Timeline Step 4 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-rose-500 border-2 border-white"></span>
+                            <span class="text-xs font-mono font-bold text-rose-600">Segundo 00:55</span>
+                            <p class="text-rose-700 font-bold mt-0.5">Da clic en confirmar... <strong>"Error: Fondos de intervención agotados para esta jornada."</strong></p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Columna 2: Con BancaBot (Velocidad quirúrgica) -->
+                <div class="p-8 rounded-3xl border-2 border-emerald-400 bg-emerald-50/40 shadow-xl shadow-emerald-500/10">
+                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-200">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-emerald-600/30">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-900">Con BancaBot</h3>
+                            <span class="text-xs text-emerald-700 font-extrabold">● Ejecución instantánea en milisegundos</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 relative pl-6 border-l-2 border-emerald-300 text-sm">
+                        
+                        <!-- Timeline Step 1 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-400 border-2 border-white"></span>
+                            <span class="text-xs font-mono font-bold text-slate-500">Segundo 00:00.00</span>
+                            <p class="text-slate-700 font-medium mt-0.5">El banco abre la ventana de intervención.</p>
+                        </div>
+
+                        <!-- Timeline Step 2 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white animate-pulse"></span>
+                            <span class="text-xs font-mono font-bold text-emerald-700">Segundo 00:00.38</span>
+                            <p class="text-slate-800 font-bold mt-0.5">BancaBot detecta el socket/apertura en 0.38 segundos, inyecta las cuentas preconfiguradas y envía la orden.</p>
+                        </div>
+
+                        <!-- Timeline Step 3 -->
+                        <div class="relative">
+                            <span class="absolute -left-[31px] top-0 w-4 h-4 rounded-full bg-emerald-600 border-2 border-white"></span>
+                            <span class="text-xs font-mono font-bold text-emerald-800">Segundo 00:00.80</span>
+                            <p class="text-emerald-900 font-black mt-0.5">✔ COMPRA EXITOSA. Débito en Bolívares procesado y divisas asignadas a tu cuenta antes de que el servidor colapse.</p>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-8 p-4 rounded-2xl bg-emerald-100/80 border border-emerald-300 text-emerald-950 font-bold text-xs flex items-center gap-3">
+                        <i class="fa-solid fa-award text-emerald-700 text-xl shrink-0"></i>
+                        <span>No compites con personas: compites con tecnología que reacciona a la velocidad de la luz.</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- MINI-TEST INTERACTIVO DE REFLEJOS (HUMANO VS BANCABOT - IDEA 1) -->
+            <div class="mt-14 bg-white border-2 border-sky-300 rounded-3xl p-6 sm:p-10 shadow-xl shadow-sky-600/10 text-center max-w-4xl mx-auto">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-100 text-sky-800 border border-sky-300 text-xs font-black uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-gamepad text-sky-600"></i> Mini-Test de Reflejos en Vivo
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900">
+                    ¿Crees que puedes comprar más rápido que un bot?
+                </h3>
+                <p class="text-slate-600 text-xs sm:text-sm mt-1.5 max-w-xl mx-auto">
+                    Pon a prueba tus reflejos en tiempo real. Comprueba cuánto tarda tu cerebro en reaccionar frente a los <strong>380 milisegundos</strong> en los que BancaBot asegura tu orden.
+                </p>
+
+                <!-- Interactive Arena Box -->
+                <div id="test-arena" onclick="handleArenaClick()" class="mt-6 p-8 sm:p-12 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 transition-all duration-150 cursor-pointer select-none hover:border-sky-500 hover:bg-sky-50/40">
+                    <div id="test-content">
+                        <div class="w-16 h-16 rounded-2xl bg-sky-100 text-sky-700 text-3xl mx-auto flex items-center justify-center mb-3 border border-sky-200">
+                            <i class="fa-solid fa-hand-pointer"></i>
+                        </div>
+                        <h4 class="text-xl font-black text-slate-800">
+                            Haz clic aquí para iniciar el test
+                        </h4>
+                        <p class="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                            El recuadro se pondrá en espera y cuando cambie a <strong class="text-emerald-700 font-black">VERDE</strong>, haz clic tan rápido como puedas.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Post-Test Result Box (Hidden by default) -->
+                <div id="test-result-box" class="hidden mt-6 text-left p-6 sm:p-8 rounded-3xl bg-slate-50 border-2 border-sky-300 shadow-md">
+                    <!-- Dynamic comparison inserted by JS -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Supported Banks Section (8 Banks Grid) -->
+    <section id="bancos" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <span class="text-sky-700 font-bold uppercase tracking-widest text-xs">Entidades Compatibles</span>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-2 mb-4">Bancos Disponibles en BancaBot</h2>
+            <p class="text-slate-500 max-w-2xl mx-auto mb-12 text-sm sm:text-base">
+                El software está optimizado individualmente para la arquitectura web de cada entidad bancaria:
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+                
+                <!-- Banco 1: Mercantil -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center text-2xl mb-4 border border-sky-100">
+                        <i class="fa-solid fa-building-columns"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Banco Mercantil</h3>
+                    <p class="text-xs text-slate-500 mt-1">Automatización en mesas de cambio.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 2: Banco del Tesoro -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center text-2xl mb-4 border border-amber-100">
+                        <i class="fa-solid fa-landmark"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Banco del Tesoro</h3>
+                    <p class="text-xs text-slate-500 mt-1">Detección y compra en intervención.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 3: Banco de Venezuela -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-rose-50 text-rose-700 flex items-center justify-center text-2xl mb-4 border border-rose-100">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Banco de Venezuela</h3>
+                    <p class="text-xs text-slate-500 mt-1">Ejecución veloz en BDV en línea.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 4: Banco Provincial -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center text-2xl mb-4 border border-sky-100">
+                        <i class="fa-solid fa-vault"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Banco Provincial</h3>
+                    <p class="text-xs text-slate-500 mt-1">Monitoreo de cupos disponibles.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 5: Bancamiga -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-2xl mb-4 border border-emerald-100">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Bancamiga</h3>
+                    <p class="text-xs text-slate-500 mt-1">Compra y asignación a cuenta.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 6: Banco Digital de los Trabajadores (BDT) -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center text-2xl mb-4 border border-indigo-100">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">B. D. Trabajadores</h3>
+                    <p class="text-xs text-slate-500 mt-1">Optimizado para portal BDT.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 7: Banco Exterior -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center text-2xl mb-4 border border-sky-100">
+                        <i class="fa-solid fa-globe"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Banco Exterior</h3>
+                    <p class="text-xs text-slate-500 mt-1">Respuesta inmediata en mesa.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+                <!-- Banco 8: Banesco -->
+                <div class="pro-card p-6 rounded-2xl flex flex-col items-center">
+                    <div class="w-14 h-14 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center text-2xl mb-4 border border-teal-100">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-900">Banesco</h3>
+                    <p class="text-xs text-slate-500 mt-1">Automatización para mesa y menudeo.</p>
+                    <span class="mt-4 px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        ● Totalmente Operativo
+                    </span>
+                </div>
+
+            </div>
+
+            <!-- IDEA 5: ANTI-MIEDO TRUST CALLOUT (CERO RIESGO DE BLOQUEO BANCARIO) -->
+            <div class="mt-14 max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-50 border-2 border-emerald-300 shadow-md flex flex-col sm:flex-row items-center gap-6 text-left">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl shrink-0 border border-emerald-300">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <div class="inline-flex items-center gap-2 px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-wider mb-1.5">
+                        <i class="fa-solid fa-circle-check text-emerald-600"></i> Seguridad Comprobada
+                    </div>
+                    <h4 class="text-lg font-black text-slate-900">¿El banco puede bloquear mi cuenta por usar BancaBot?</h4>
+                    <p class="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
+                        <strong>No, en lo absoluto.</strong> BancaBot no hackea, no modifica el sistema del banco ni envía peticiones anormales a sus servidores. El software opera de manera 100% local en tu propia computadora, ejecutando las pulsaciones y clicks dentro de tu sesión legítima y autorizada. Para el banco es una compra completamente normal realizada desde tu IP de siempre.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it works (Simple & Direct with Basstew) -->
+    <section id="como-funciona" class="py-20 bg-slate-100 border-t border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <span class="text-sky-700 font-bold uppercase tracking-widest text-xs">Paso a Paso</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-1">¿Cómo adquieres tu bot hoy mismo?</h2>
+                <p class="text-slate-600 mt-2 text-base">Todo el proceso es personal, asistido y guiado directamente por Basstew.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="pro-card p-8 rounded-2xl">
+                    <div class="w-12 h-12 rounded-xl bg-sky-100 text-sky-700 font-extrabold text-xl flex items-center justify-center mb-6 border border-sky-200">
+                        1
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Escríbele a Basstew</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Me contactas por Telegram indicándome qué banco usas. Aclaramos cualquier pregunta en 2 minutos sin rodeos.
+                    </p>
+                </div>
+
+                <div class="pro-card p-8 rounded-2xl">
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 font-extrabold text-xl flex items-center justify-center mb-6 border border-amber-200">
+                        2
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Pago con Binance Pay (USDT)</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Pagas de forma rápida y sin comisiones mediante Binance Pay. En el mismo instante recibes el archivo y tu clave.
+                    </p>
+                </div>
+
+                <div class="pro-card p-8 rounded-2xl">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 font-extrabold text-xl flex items-center justify-center mb-6 border border-emerald-200">
+                        3
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900 mb-2">Puesta en Marcha Asistida</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Te acompaño paso a paso para que tu bot quede listo en tu computadora, preparado para comprar en la siguiente intervención.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section (#comprar) - INCLUYE IDEA 6: PACK DÚO 2 EQUIPOS -->
+    <section id="comprar" class="py-24 border-t border-slate-200 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-1 rounded-full font-bold uppercase tracking-widest text-xs inline-block mb-3">
+                    Inversión de Pago Único • Sin Mensualidades
+                </span>
+                <h2 class="text-3xl sm:text-5xl font-extrabold text-slate-900">Planes y Licencias de BancaBot</h2>
+                <p class="text-slate-600 mt-3 text-base">
+                    Pagas una sola vez. No te cobramos porcentajes de ganancia ni tarifas mensuales por operar.
+                </p>
+            </div>
+
+            <!-- Cards Grid: 3 Clean Balanced Plans (Mono-Banco, Multi-Banco Pro y Pack Dúo) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
+                
+                <!-- Plan 1: Mono-Banco (30 USDT) -->
+                <div class="pro-card p-8 rounded-3xl flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Opción 1</span>
+                            <span class="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-md font-bold border border-slate-200">1 Equipo</span>
+                        </div>
+                        
+                        <h3 class="text-2xl font-extrabold text-slate-900">Licencia Mono-Banco</h3>
+                        <p class="text-slate-600 text-xs mt-2">Para quien opera únicamente en una sola entidad bancaria.</p>
+                        
+                        <div class="my-6">
+                            <span class="text-4xl font-extrabold text-slate-900 font-mono">30 <span class="text-xl font-bold text-amber-600">USDT</span></span>
+                            <span class="text-slate-500 text-xs font-semibold block mt-1">Pago único vía Binance Pay</span>
+                        </div>
+
+                        <ul class="space-y-3.5 text-xs sm:text-sm text-slate-700 border-t border-slate-200 pt-6">
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> 1 Banco de tu elección
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Licencia para 1 computadora
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Entrega y tutorial directo por Telegram
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Soporte 1 a 1 directo con Basstew
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-brands fa-bitcoin text-amber-600 font-bold"></i> Pago rápido sin comisiones por Binance Pay
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="https://t.me/Basstew?text=Hola%20Basstew,%20me%20interesa%20comprar%20la%20Licencia%20Mono-Banco%20de%20BancaBot%20(30%20USDT)" target="_blank" class="mt-8 w-full bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold py-3.5 px-4 rounded-xl text-center text-sm transition shadow-md flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-telegram text-base"></i>
+                        <span>Pedir por Telegram</span>
+                    </a>
+                </div>
+
+                <!-- Plan 2: Multi-Banco PRO (60 USDT - Highlighted) -->
+                <div class="bg-gradient-to-b from-sky-50 to-white border-2 border-sky-600 p-8 rounded-3xl relative flex flex-col justify-between shadow-xl shadow-sky-600/10 lg:-translate-y-3">
+                    <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-sky-600 text-white text-xs font-extrabold uppercase px-4 py-1 rounded-full tracking-wider shadow">
+                        Más Recomendada
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-4 mt-1">
+                            <span class="text-xs font-bold uppercase tracking-wider text-sky-800">Acceso Total</span>
+                            <span class="text-xs bg-sky-100 text-sky-800 px-3 py-1 rounded-md font-bold border border-sky-200">Todos los Bancos</span>
+                        </div>
+
+                        <h3 class="text-2xl font-extrabold text-slate-900">Licencia Full Pro</h3>
+                        <p class="text-slate-600 text-xs mt-2">Para quienes operan con varios bancos y no quieren perder ninguna tasa.</p>
+
+                        <div class="my-6">
+                            <span class="text-4xl font-extrabold text-sky-700 font-mono">60 <span class="text-xl font-bold text-amber-600">USDT</span></span>
+                            <span class="text-slate-500 text-xs font-semibold block mt-1">Pago único vía Binance Pay</span>
+                        </div>
+
+                        <ul class="space-y-3.5 text-xs sm:text-sm text-slate-700 border-t border-sky-100 pt-6">
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> <strong>Todos los 8 bancos disponibles</strong>
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Licencia para 1 computadora
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Soporte prioritario 1 a 1 con Basstew
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Asistencia en instalación remota
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-sky-600 font-bold"></i> Actualizaciones prioritarias incluidas
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="https://t.me/Basstew?text=Hola%20Basstew,%20quiero%20adquirir%20la%20Licencia%20Full%20Pro%20Multi-Banco%20(60%20USDT)" target="_blank" class="mt-8 w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold py-3.5 px-4 rounded-xl text-center text-sm transition shadow-lg shadow-sky-600/25 flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-telegram text-base"></i>
+                        <span>Comprar Licencia Pro</span>
+                    </a>
+                </div>
+
+                <!-- Plan 3: IDEA 6 - PACK DÚO 2 EQUIPOS (99 USDT) -->
+                <div class="pro-card p-8 rounded-3xl flex flex-col justify-between border-2 border-emerald-300 bg-emerald-50/20">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xs font-black uppercase tracking-wider text-emerald-800">Ideal Socios / Empresas</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-md font-extrabold border border-emerald-300">Ahorras 21 USDT</span>
+                        </div>
+
+                        <h3 class="text-2xl font-extrabold text-slate-900">Pack Dúo Multi-Banco</h3>
+                        <p class="text-slate-600 text-xs mt-2">Para operar simultáneamente en 2 computadoras o con un socio.</p>
+
+                        <div class="my-6">
+                            <span class="text-4xl font-extrabold text-emerald-700 font-mono">99 <span class="text-xl font-bold text-amber-600">USDT</span></span>
+                            <span class="text-slate-500 text-xs font-semibold block mt-1">2 Equipos • Todos los Bancos</span>
+                        </div>
+
+                        <ul class="space-y-3.5 text-xs sm:text-sm text-slate-700 border-t border-emerald-200 pt-6">
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-emerald-600 font-bold"></i> <strong>2 Licencias independientes</strong>
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-emerald-600 font-bold"></i> Todos los 8 bancos incluidos en ambos equipos
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-emerald-600 font-bold"></i> Puesta en marcha en ambas máquinas
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-check text-emerald-600 font-bold"></i> Soporte VIP directo para ambos operadores
+                            </li>
+                            <li class="flex items-center gap-2.5">
+                                <i class="fa-brands fa-bitcoin text-amber-600 font-bold"></i> Pago único por Binance Pay
+                            </li>
+                        </ul>
+                    </div>
+
+                    <a href="https://t.me/Basstew?text=Hola%20Basstew,%20me%20interesa%20el%20Pack%20Dúo%20de%202%20Equipos%20Multi-Banco%20(99%20USDT)" target="_blank" class="mt-8 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3.5 px-4 rounded-xl text-center text-sm transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+                        <i class="fa-brands fa-telegram text-base"></i>
+                        <span>Pedir Pack Dúo (2 Equipos)</span>
+                    </a>
+                </div>
+
+            </div>
+
+            <!-- Clean Binance Pay Info Banner -->
+            <div class="mt-14 max-w-lg mx-auto text-center">
+                <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center gap-4 shadow-sm">
+                    <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-xl shrink-0 border border-amber-200">
+                        <i class="fa-brands fa-bitcoin"></i>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-slate-900 font-bold text-sm block">Pagos vía Binance Pay / USDT</span>
+                        <span class="text-slate-500 text-xs">Acreditación en segundos mediante Pay ID, código QR o billetera.</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- IDEA 4: LA GARANTÍA PERSONAL BASSTEW (CERO RIESGO) -->
+    <section id="garantia" class="py-16 bg-slate-100 border-t border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="rounded-3xl bg-white border-2 border-emerald-400 p-8 sm:p-12 shadow-lg shadow-emerald-500/10 flex flex-col md:flex-row items-center gap-8">
+                <div class="w-20 h-20 shrink-0 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-4xl border border-emerald-300">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <span class="text-xs font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                        Tranquilidad Absoluta
+                    </span>
+                    <h3 class="text-2xl font-black text-slate-900 mt-2 mb-2">La Garantía de Acompañamiento Basstew</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        No te dejo solo con un archivo. Si es tu primera vez usando automatizaciones bancarias, <strong>me conecto o te asisto por Telegram en tiempo real durante tu primera intervención</strong> para verificar que tus cuentas, montos y bot estén perfectamente engranados antes de la apertura. Si algo no queda bien configurado, lo resolvemos juntos al instante.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="py-20 bg-white border-t border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <span class="text-sky-700 font-bold uppercase tracking-widest text-xs">Dudas Frecuentes</span>
+                <h2 class="text-3xl font-extrabold text-slate-900 mt-1">Preguntas Frecuentes</h2>
+            </div>
+
+            <div class="space-y-4">
+                <!-- FAQ 1 (IDEA 5: ANTI-MIEDO BLOQUEOS BANCARIOS - DESTACADA) -->
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm border-2 border-emerald-300 bg-emerald-50/20" open>
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-shield-halved text-emerald-600 text-lg"></i>
+                            <span>¿El banco puede bloquear o suspender mi cuenta bancaria por usar BancaBot?</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-emerald-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <div class="mt-4 text-slate-700 text-sm leading-relaxed space-y-2 border-t border-emerald-200/60 pt-3">
+                        <p>
+                            <strong>No, de ninguna manera.</strong> BancaBot no es un software invasivo ni altera la infraestructura del banco. Funciona de manera 100% local en tu propia computadora, ejecutando la selección de cuentas y el envío de la orden a velocidad de milisegundos dentro de tu propia sesión oficial.
+                        </p>
+                        <p>
+                            Para la plataforma bancaria, la orden es procesada dentro de <strong>tu sesión legítima, autorizada por ti y originada desde tu dirección IP habitual</strong>. Es idéntico a que una persona hiciera clic de forma instantánea, por lo que no viola controles de seguridad ni genera alertas de riesgo.
+                        </p>
+                    </div>
+                </details>
+
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm">
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span>¿Realmente se paga solo el bot en la primera compra?</span>
+                        <i class="fa-solid fa-chevron-down text-sky-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-600 text-sm leading-relaxed">
+                        Sí, matemáticamente. Al comprar divisas a tasa oficial en lugar del mercado informal o P2P, te ahorras entre un 15% y un 30% en sobreprecio. Si compras $300 a $500 en una sola intervención, el ahorro generado supera de inmediato el costo de la licencia de 30 USDT.
+                    </p>
+                </details>
+
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm">
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span>¿Cómo es el proceso de compra con Basstew?</span>
+                        <i class="fa-solid fa-chevron-down text-sky-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-600 text-sm leading-relaxed">
+                        Es totalmente directo conmigo a través de Telegram. Me escribes con el botón de la web, me indicas qué banco necesitas, realizas el pago en USDT mediante Binance Pay y de inmediato te entrego tu bot, tu clave y te acompaño en la puesta en marcha.
+                    </p>
+                </details>
+
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm">
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span>¿Cómo realizo el pago por Binance Pay?</span>
+                        <i class="fa-solid fa-chevron-down text-sky-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-600 text-sm leading-relaxed">
+                        Te proporciono directamente mi Binance Pay ID o un código QR para escanear desde tu aplicación de Binance. El envío se acredita al instante y sin ninguna comisión de red.
+                    </p>
+                </details>
+
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm">
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span>¿Es seguro para mis claves bancarias?</span>
+                        <i class="fa-solid fa-chevron-down text-sky-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-600 text-sm leading-relaxed">
+                        Totalmente. El bot opera de manera 100% local en tu propio equipo. Tus contraseñas y datos jamás viajan a ningún servidor externo ni son accesibles para nadie más que tú.
+                    </p>
+                </details>
+
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm">
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span>¿Qué pasa si el banco cambia su portal?</span>
+                        <i class="fa-solid fa-chevron-down text-sky-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-600 text-sm leading-relaxed">
+                        Como creador directo del bot, monitoreo constantemente las plataformas. Cuando un banco hace una modificación, preparo la actualización y te la entrego directamente por Telegram sin costo extra.
+                    </p>
+                </details>
+
+                <details class="pro-card p-6 rounded-2xl cursor-pointer group shadow-sm">
+                    <summary class="flex justify-between items-center font-bold text-slate-900 text-base list-none">
+                        <span>¿En qué computadoras funciona?</span>
+                        <i class="fa-solid fa-chevron-down text-sky-600 transition-transform duration-200 group-open:rotate-180"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-600 text-sm leading-relaxed">
+                        Funciona de forma fluida en cualquier computadora con Windows o Mac, sin requerir programas pesados ni conocimientos técnicos previos.
+                    </p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+    <!-- Direct Contact Banner -->
+    <section class="py-16 bg-gradient-to-b from-sky-50 to-white text-slate-900 border-t border-slate-200 text-center">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="w-14 h-14 rounded-full bg-[#0088cc]/10 text-[#0088cc] border border-[#0088cc]/20 flex items-center justify-center text-2xl mx-auto mb-4">
+                <i class="fa-brands fa-telegram"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold text-slate-900">¿Tienes alguna pregunta antes de empezar?</h2>
+            <p class="text-slate-600 mt-2 mb-6">Háblame directamente. Te respondo con gusto y sin compromiso.</p>
+            <a href="https://t.me/Basstew?text=Hola%20Basstew,%20tengo%20una%20consulta%20sobre%20BancaBot" target="_blank" class="inline-flex items-center gap-2.5 bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold px-7 py-3.5 rounded-xl text-base shadow-md shadow-[#0088cc]/20 transition">
+                <i class="fa-brands fa-telegram text-lg"></i>
+                <span>Escríbeme a mi Telegram (@Basstew)</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-8 bg-white border-t border-slate-200 text-xs text-slate-500 text-center">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© 2026 BancaBot • Desarrollado por Basstew. Todos los derechos reservados.</p>
+            <div class="flex gap-4">
+                <a href="https://t.me/Basstew" target="_blank" class="text-slate-600 hover:text-sky-600 transition font-medium">Telegram: @Basstew</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Floating Telegram Quick Button with "En línea" indicator -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <a href="https://t.me/Basstew" target="_blank" class="flex items-center gap-3 bg-[#0088cc] hover:bg-[#0077b5] text-white font-bold px-5 py-3 rounded-full shadow-xl transition-all hover:scale-105 border border-white/20 group">
+            <div class="relative">
+                <i class="fa-brands fa-telegram text-2xl"></i>
+                <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border border-[#0088cc] animate-pulse"></span>
+            </div>
+            <div class="hidden sm:flex flex-col text-left">
+                <span class="text-[11px] text-sky-200 uppercase tracking-wider font-extrabold leading-tight">En línea</span>
+                <span class="text-sm font-bold leading-tight">Escríbeme por Telegram</span>
+            </div>
+        </a>
+    </div>
+
+    <!-- LIVE SOCIAL PROOF NOTIFICATION TOAST (IDEA 2) -->
+    <div id="social-toast" class="fixed bottom-6 left-4 sm:left-6 z-40 max-w-[340px] bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-2xl p-3.5 flex items-center gap-3 transition-all duration-500 transform translate-y-12 opacity-0 pointer-events-none">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center text-lg shrink-0">
+            <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div class="flex-1 min-w-0 text-left">
+            <div class="flex items-center justify-between gap-1">
+                <span id="toast-title" class="text-xs font-black text-slate-900 truncate">Licencia Activada</span>
+                <span id="toast-time" class="text-[10px] text-slate-400 font-mono whitespace-nowrap">hace 8 min</span>
+            </div>
+            <p id="toast-desc" class="text-[11px] text-slate-600 mt-0.5 leading-tight truncate">
+                Alguien en Caracas adquirió Full Pro
+            </p>
+        </div>
+        <button type="button" onclick="dismissToast()" class="text-slate-400 hover:text-slate-600 p-1 text-xs transition cursor-pointer" title="Cerrar">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- SCRIPT FOR LIVE BCV USD CALCULATOR, BINANCE P2P COMPARISON & TOP TICKER -->
+    <script>
+        // State variables (USD BCV & Binance P2P USDT)
+        let liveRates = {
+            usd: 891.1054,
+            binanceUsdt: 1008.95,
+            brechaPct: 12.86
+        };
+        let selectedMode = 'intervencion'; // 'intervencion' (+0.50%) or 'bcv' (base)
+        let lastUpdated = null;
+
+        // Number formatter helper for Venezuelan Bolívares
+        function formatBs(val) {
+            return 'Bs. ' + Number(val).toLocaleString('es-VE', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Fetch Live Rates from API (Primary: https://www.usdt.com.ve/api/v1/rates/current, Fallback: https://bcv.justcarlux.dev/api/v1/rates)
+        async function loadLiveRates() {
+            let fetched = false;
+            try {
+                const response = await fetch('https://www.usdt.com.ve/api/v1/rates/current');
+                if (response.ok) {
+                    const res = await response.json();
+                    if (res && res.success && res.data) {
+                        if (res.data.bcv && res.data.bcv.rate) {
+                            liveRates.usd = Number(res.data.bcv.rate);
+                        }
+                        if (res.data.binance) {
+                            // sell_rate represents the cost to buy USDT in Binance P2P
+                            liveRates.binanceUsdt = Number(res.data.binance.sell_rate || res.data.binance.buy_rate || 1008.95);
+                        }
+                        if (res.data.brecha_pct !== undefined) {
+                            liveRates.brechaPct = Number(res.data.brecha_pct);
+                        }
+                        if (res.data.captured_at) {
+                            lastUpdated = new Date(res.data.captured_at);
+                        }
+                        fetched = true;
+                    }
+                }
+            } catch (err) {
+                console.warn('Error al consultar usdt.com.ve, usando respaldo:', err);
+            }
+
+            // Fallback for BCV if primary failed
+            if (!fetched) {
+                try {
+                    const fallbackRes = await fetch('https://bcv.justcarlux.dev/api/v1/rates');
+                    if (fallbackRes.ok) {
+                        const fallbackData = await fallbackRes.json();
+                        if (fallbackData && fallbackData.rates && fallbackData.rates.usd) {
+                            liveRates.usd = Number(fallbackData.rates.usd);
+                            if (fallbackData.updatedAt) {
+                                lastUpdated = new Date(fallbackData.updatedAt);
+                            }
+                        }
+                    }
+                } catch (fallbackErr) {
+                    console.warn('Error en API de respaldo BCV:', fallbackErr);
+                }
+            }
+
+            updateUI();
+        }
+
+        function updateUI() {
+            const usdBase = liveRates.usd;
+            const usdIntervencion = usdBase * 1.005;
+            const binanceRate = liveRates.binanceUsdt;
+            const brecha = liveRates.brechaPct || (((binanceRate - usdIntervencion) / usdIntervencion) * 100);
+
+            // Update top bar ticker
+            const tickerBcvUsd = document.getElementById('ticker-bcv-usd');
+            const tickerIntervencionUsd = document.getElementById('ticker-intervencion-usd');
+            const tickerBinanceP2p = document.getElementById('ticker-binance-p2p');
+            const tickerBrecha = document.getElementById('ticker-brecha');
+
+            if (tickerBcvUsd) tickerBcvUsd.innerHTML = `USD BCV: <strong class="text-slate-900 font-bold">${formatBs(usdBase)}</strong>`;
+            if (tickerIntervencionUsd) tickerIntervencionUsd.innerHTML = `Intervención (+0.50%): <strong class="text-sky-700 font-extrabold">${formatBs(usdIntervencion)}</strong>`;
+            if (tickerBinanceP2p) tickerBinanceP2p.innerHTML = `Binance P2P (USDT): <strong class="text-amber-800 font-bold">${formatBs(binanceRate)}</strong>`;
+            if (tickerBrecha) tickerBrecha.innerHTML = `Brecha: <strong class="text-emerald-700 font-black">+${brecha.toFixed(1)}%</strong>`;
+
+            // Update calculator rate cards
+            const displayIntervencion = document.getElementById('rate-display-intervencion');
+            const displayBcv = document.getElementById('rate-display-bcv');
+
+            if (displayIntervencion) displayIntervencion.innerText = formatBs(usdIntervencion);
+            if (displayBcv) displayBcv.innerText = formatBs(usdBase);
+
+            const updatedAtEl = document.getElementById('calc-updated-at');
+            if (updatedAtEl) {
+                if (lastUpdated) {
+                    updatedAtEl.innerText = lastUpdated.toLocaleDateString('es-VE') + ' ' + lastUpdated.toLocaleTimeString('es-VE', {hour: '2-digit', minute:'2-digit'});
+                } else {
+                    updatedAtEl.innerText = new Date().toLocaleTimeString('es-VE', {hour: '2-digit', minute:'2-digit'});
+                }
+            }
+
+            calculateTotal();
+        }
+
+        // Explicit, Flawless Highlight Switcher between Intervención and BCV
+        function setRateMode(mode) {
+            selectedMode = mode;
+            const btnIntervencion = document.getElementById('btn-mode-intervencion');
+            const btnBcv = document.getElementById('btn-mode-bcv');
+            const badgeIntervencion = document.getElementById('badge-intervencion');
+            const badgeBcv = document.getElementById('badge-bcv');
+            const badgeApplied = document.getElementById('badge-mode-applied');
+            const iconIntervencion = document.getElementById('icon-container-intervencion');
+            const iconBcv = document.getElementById('icon-container-bcv');
+
+            if (mode === 'intervencion') {
+                // Intervención is ACTIVE
+                btnIntervencion.className = 'rate-card-active p-5 rounded-2xl text-left flex items-center justify-between transition cursor-pointer';
+                btnBcv.className = 'rate-card-inactive p-5 rounded-2xl text-left flex items-center justify-between transition cursor-pointer';
+
+                badgeIntervencion.className = 'text-xs font-black bg-sky-600 text-white px-3 py-1.5 rounded-lg uppercase shadow-sm';
+                badgeIntervencion.innerText = '✓ Seleccionada';
+                badgeIntervencion.classList.remove('hidden');
+
+                badgeBcv.classList.add('hidden');
+
+                iconIntervencion.className = 'w-12 h-12 rounded-xl bg-sky-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-sky-600/30';
+                iconBcv.className = 'w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl font-bold';
+
+                if (badgeApplied) {
+                    badgeApplied.innerText = 'Intervención (+0.50%)';
+                    badgeApplied.className = 'bg-sky-100 text-sky-800 text-[11px] font-black px-2.5 py-0.5 rounded-full border border-sky-300';
+                }
+            } else {
+                // BCV Base is ACTIVE
+                btnBcv.className = 'rate-card-active p-5 rounded-2xl text-left flex items-center justify-between transition cursor-pointer';
+                btnIntervencion.className = 'rate-card-inactive p-5 rounded-2xl text-left flex items-center justify-between transition cursor-pointer';
+
+                badgeBcv.className = 'text-xs font-black bg-sky-600 text-white px-3 py-1.5 rounded-lg uppercase shadow-sm';
+                badgeBcv.innerText = '✓ Seleccionada';
+                badgeBcv.classList.remove('hidden');
+
+                badgeIntervencion.classList.add('hidden');
+
+                iconBcv.className = 'w-12 h-12 rounded-xl bg-sky-600 text-white flex items-center justify-center text-xl font-bold shadow-md shadow-sky-600/30';
+                iconIntervencion.className = 'w-12 h-12 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center text-xl font-bold';
+
+                if (badgeApplied) {
+                    badgeApplied.innerText = 'Tasa BCV Base (+0%)';
+                    badgeApplied.className = 'bg-slate-200 text-slate-800 text-[11px] font-black px-2.5 py-0.5 rounded border border-slate-300';
+                }
+            }
+
+            calculateTotal();
+        }
+
+        function updatePresetButtons(amt) {
+            const buttons = document.querySelectorAll('.preset-btn');
+            buttons.forEach(btn => {
+                const val = parseInt(btn.getAttribute('data-amount') || btn.innerText.replace(/,/g, ''));
+                if (val === amt) {
+                    btn.className = 'preset-btn py-2.5 px-3 rounded-xl bg-sky-600 text-white font-black text-xs font-mono transition shadow-md';
+                } else {
+                    btn.className = 'preset-btn py-2.5 px-3 rounded-xl bg-white hover:bg-sky-600 hover:text-white border border-slate-200 text-slate-700 font-bold text-xs font-mono transition shadow-sm';
+                }
+            });
+        }
+
+        function setPreset(amt) {
+            const input = document.getElementById('calc-amount-input');
+            if (input) {
+                input.value = amt;
+                updatePresetButtons(amt);
+                calculateTotal();
+            }
+        }
+
+        function calculateTotal() {
+            const input = document.getElementById('calc-amount-input');
+            const amount = parseFloat(input ? input.value : 0) || 0;
+            const baseRate = liveRates.usd;
+            const binanceRate = liveRates.binanceUsdt;
+            
+            // Selected card fee (from dropdown)
+            const cardFeeSelect = document.getElementById('calc-card-fee');
+            const cardFeePct = parseFloat(cardFeeSelect ? cardFeeSelect.value : 0.025) || 0;
+
+            const labelCardFee = document.getElementById('label-card-fee-applied');
+            if (labelCardFee) {
+                labelCardFee.innerText = (cardFeePct * 100).toFixed(1).replace('.0', '') + '% Comisión';
+            }
+
+            // Effective bank rate: Base or +0.50% Intervención
+            const effectiveRate = selectedMode === 'intervencion' ? (baseRate * 1.005) : baseRate;
+            const totalBsBank = amount * effectiveRate;
+
+            // EXACT ARBITRAGE CALCULATION (SAME AS CALCUDIVISAS):
+            // 1. Commission deducted by the bank card when funding Binance:
+            const comisionTarjetaUsd = amount * cardFeePct;
+            const netoBinanceUsdt = Math.max(0, amount - comisionTarjetaUsd);
+
+            // 2. Bolívares received from selling those USDT on Binance P2P:
+            const retornoP2pBs = netoBinanceUsdt * binanceRate;
+
+            // 3. Net profit in Bolívares (Retorno P2P - Total Pagado en Banco):
+            const gananciaNetaBs = retornoP2pBs - totalBsBank;
+
+            // 4. Net clean USD profit (in USDT):
+            const gananciaNetaUsdt = binanceRate > 0 ? (gananciaNetaBs / binanceRate) : 0;
+            
+            // Spread / Brecha and Rendimiento %
+            const brechaPct = effectiveRate > 0 ? (((binanceRate - effectiveRate) / effectiveRate) * 100) : 0;
+            const rendimientoPct = totalBsBank > 0 ? ((gananciaNetaBs / totalBsBank) * 100) : 0;
+
+            const resultBsEl = document.getElementById('calc-result-bs');
+            const resultRateEl = document.getElementById('calc-result-rate');
+            const resultDivisasEl = document.getElementById('calc-result-divisas');
+
+            // Arbitrage comparison elements
+            const calcBrechaBadge = document.getElementById('calc-brecha-badge');
+            const calcBinanceRateEl = document.getElementById('calc-binance-rate');
+            const calcNetoBinanceEl = document.getElementById('calc-neto-binance');
+            const calcRetornoP2pEl = document.getElementById('calc-retorno-p2p');
+            const calcSavingsBsEl = document.getElementById('calc-savings-bs');
+            const calcSavingsUsdEl = document.getElementById('calc-savings-usd');
+            const calcSavingsHookEl = document.getElementById('calc-savings-hook');
+
+            if (resultBsEl) resultBsEl.innerText = formatBs(totalBsBank);
+            if (resultRateEl) {
+                const modeSuffix = selectedMode === 'intervencion' ? ' (+0.50% Intervención)' : ' (BCV Base)';
+                resultRateEl.innerText = formatBs(effectiveRate) + ' / USD' + modeSuffix;
+            }
+            if (resultDivisasEl) {
+                resultDivisasEl.innerText = '$ ' + amount.toLocaleString('es-VE') + ' USD';
+            }
+
+            // Update Arbitrage details
+            if (calcBrechaBadge) {
+                calcBrechaBadge.innerText = `+${brechaPct.toFixed(1)}% Brecha`;
+            }
+            if (calcBinanceRateEl) {
+                calcBinanceRateEl.innerText = `${formatBs(binanceRate)} / USDT`;
+            }
+            if (calcNetoBinanceEl) {
+                calcNetoBinanceEl.innerText = `${netoBinanceUsdt.toFixed(2)} USDT`;
+            }
+            if (calcRetornoP2pEl) {
+                calcRetornoP2pEl.innerText = formatBs(retornoP2pBs);
+            }
+            if (calcSavingsBsEl) {
+                calcSavingsBsEl.innerText = `${gananciaNetaBs >= 0 ? '+' : ''}${formatBs(gananciaNetaBs)}`;
+            }
+            if (calcSavingsUsdEl) {
+                calcSavingsUsdEl.innerText = `${gananciaNetaUsdt >= 0 ? '+' : ''}$${gananciaNetaUsdt.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USDT`;
+            }
+            if (calcSavingsHookEl) {
+                if (gananciaNetaUsdt >= 30) {
+                    calcSavingsHookEl.innerHTML = `✨ <strong>¡Con esta sola operación ganas +$${Math.round(gananciaNetaUsdt)} USDT netos!</strong> (+${rendimientoPct.toFixed(1)}% de rendimiento). Recuperas por completo la licencia de 30 USDT y te queda ganancia en mano.`;
+                } else if (gananciaNetaUsdt > 0) {
+                    calcSavingsHookEl.innerHTML = `✨ <strong>Ganancia neta real de +$${gananciaNetaUsdt.toFixed(2)} USDT:</strong> Ya tiene descontada la comisión de intervención (+0.50%) y el ${(cardFeePct*100).toFixed(1)}% de la tarjeta internacional.`;
+                } else {
+                    calcSavingsHookEl.innerHTML = `✨ Precios y tasas oficiales actualizadas en vivo.`;
+                }
+            }
+
+            updatePresetButtons(amount);
+        }
+
+        // Copy Amount Function with Visual Feedback
+        function copyResultAmount() {
+            const resultText = document.getElementById('calc-result-bs').innerText;
+            navigator.clipboard.writeText(resultText).then(() => {
+                const btn = document.getElementById('btn-copy-amount');
+                const btnText = document.getElementById('btn-copy-text');
+
+                btn.className = 'w-full bg-emerald-600 text-white font-bold py-3.5 px-3 rounded-xl text-center text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-600/25 transition';
+                btnText.innerHTML = '<i class="fa-solid fa-check text-base"></i> ¡Copiado!';
+
+                setTimeout(() => {
+                    btn.className = 'w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 px-3 rounded-xl text-center text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 transition active:scale-98 cursor-pointer';
+                    btnText.innerHTML = '<i class="fa-regular fa-copy text-base"></i> Copiar Monto en Bs.';
+                }, 2000);
+            }).catch(err => {
+                console.error('Error al copiar:', err);
+            });
+        }
+
+        // IDEA 2: Share Calculation on WhatsApp
+        function shareCalculationWhatsApp() {
+            const input = document.getElementById('calc-amount-input');
+            const amount = parseFloat(input ? input.value : 0) || 0;
+            const bankSelect = document.getElementById('calc-card-fee');
+            const bankName = bankSelect ? bankSelect.options[bankSelect.selectedIndex].text.split(' (')[0] : 'Banco';
+            const totalBsText = document.getElementById('calc-result-bs')?.innerText || '0 Bs';
+            const netoBinanceText = document.getElementById('calc-neto-binance')?.innerText || '--';
+            const retornoP2pText = document.getElementById('calc-retorno-p2p')?.innerText || '--';
+            const savingsBsText = document.getElementById('calc-savings-bs')?.innerText || '--';
+            const savingsUsdText = document.getElementById('calc-savings-usd')?.innerText || '--';
+            const binanceRateText = document.getElementById('calc-binance-rate')?.innerText || '--';
+            const brechaText = document.getElementById('calc-brecha-badge')?.innerText || '';
+
+            const shareMsg = `📊 *Cálculo de Intervención Bancaria - BancaBot*\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `💵 *Monto a Comprar:* $${amount.toLocaleString('es-VE')} USD\n` +
+                `🏦 *Banco:* ${bankName}\n` +
+                `💸 *Bolívares Necesarios:* *${totalBsText}*\n\n` +
+                `🔄 *Paso a Binance P2P:*\n` +
+                `• Llegan a Binance (neto): ${netoBinanceText}\n` +
+                `• Tasa Binance P2P: ${binanceRateText}\n` +
+                `• Retorno vendido en P2P: ${retornoP2pText}\n\n` +
+                `💰 *GANANCIA NETA LIMPIA:*\n` +
+                `👉 *${savingsUsdText}* (${savingsBsText})\n` +
+                `📈 Brecha Oficial vs P2P: ${brechaText}\n` +
+                `━━━━━━━━━━━━━━━━━━━━\n` +
+                `⚡ Ejecutado en 0.38s antes del colapso bancario con *BancaBot* por @Basstew\n` +
+                `📲 Escríbele a Basstew por Telegram: https://t.me/Basstew`;
+
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(shareMsg)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        // ==========================================
+        // MINI-TEST DE REFLEJOS (HUMANO VS BANCABOT - IDEA 1)
+        // ==========================================
+        let testState = 'idle'; // 'idle', 'waiting', 'ready', 'finished'
+        let testTimer = null;
+        let testStartTime = 0;
+
+        function handleArenaClick() {
+            const arena = document.getElementById('test-arena');
+            const content = document.getElementById('test-content');
+            const resultBox = document.getElementById('test-result-box');
+
+            if (testState === 'idle') {
+                // Inicia el test -> pasa a WAITING
+                testState = 'waiting';
+                if (resultBox) resultBox.classList.add('hidden');
+                
+                arena.className = 'mt-6 p-8 sm:p-12 rounded-2xl border-2 border-amber-400 bg-amber-50 text-amber-950 transition-all duration-150 cursor-pointer select-none';
+                content.innerHTML = `
+                    <div class="w-16 h-16 rounded-2xl bg-amber-200 text-amber-800 text-3xl mx-auto flex items-center justify-center mb-3 animate-pulse">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <h4 class="text-xl font-black text-amber-900">
+                        ¡Espera que cambie a VERDE!
+                    </h4>
+                    <p class="text-xs text-amber-700 mt-1 font-semibold">
+                        Prepárate... no hagas clic antes de tiempo.
+                    </p>
+                `;
+
+                // Retardo aleatorio entre 1.5 y 3.8 segundos
+                const delay = Math.floor(Math.random() * 2300) + 1500;
+                testTimer = setTimeout(() => {
+                    testState = 'ready';
+                    testStartTime = performance.now();
+                    arena.className = 'mt-6 p-8 sm:p-12 rounded-2xl border-2 border-emerald-500 bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 transition-all duration-75 cursor-pointer select-none active:scale-98';
+                    content.innerHTML = `
+                        <div class="w-16 h-16 rounded-2xl bg-white text-emerald-600 text-3xl mx-auto flex items-center justify-center mb-3 shadow-md animate-bounce">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <h4 class="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider">
+                            ¡¡¡DALE CLIC YA MISMO!!!
+                        </h4>
+                        <p class="text-xs text-emerald-100 mt-1 font-bold">
+                            ¡CLIC RÁPIDO!
+                        </p>
+                    `;
+                }, delay);
+
+            } else if (testState === 'waiting') {
+                // Clic antes de tiempo
+                clearTimeout(testTimer);
+                testState = 'idle';
+                arena.className = 'mt-6 p-8 sm:p-12 rounded-2xl border-2 border-rose-300 bg-rose-50 text-rose-950 transition-all duration-150 cursor-pointer select-none';
+                content.innerHTML = `
+                    <div class="w-16 h-16 rounded-2xl bg-rose-200 text-rose-800 text-3xl mx-auto flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h4 class="text-xl font-black text-rose-900">
+                        ⚠️ ¡Demasiado rápido! Te adelantaste.
+                    </h4>
+                    <p class="text-xs text-rose-700 mt-1">
+                        Hiciste clic antes de que el banco abriera la mesa. Haz clic aquí para reiniciar el test.
+                    </p>
+                `;
+
+            } else if (testState === 'ready') {
+                // Clic exitoso en verde
+                const reactionMs = Math.round(performance.now() - testStartTime);
+                testState = 'finished';
+
+                arena.className = 'mt-6 p-8 sm:p-12 rounded-2xl border-2 border-slate-300 bg-slate-50 transition-all duration-150 cursor-pointer select-none';
+                content.innerHTML = `
+                    <div class="w-16 h-16 rounded-2xl bg-sky-100 text-sky-700 text-3xl mx-auto flex items-center justify-center mb-3 border border-sky-200">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                    </div>
+                    <h4 class="text-xl font-black text-slate-800">
+                        ¡Test completado! Revisa tu resultado abajo 👇
+                    </h4>
+                    <p class="text-xs text-sky-700 mt-1 font-bold">
+                        Haz clic aquí si quieres reintentar tu tiempo.
+                    </p>
+                `;
+
+                displayTestResults(reactionMs);
+
+            } else if (testState === 'finished') {
+                testState = 'idle';
+                handleArenaClick();
+            }
+        }
+
+        function displayTestResults(userMs) {
+            const resultBox = document.getElementById('test-result-box');
+            if (!resultBox) return;
+
+            const botMs = 380;
+            const diffMs = Math.max(0, userMs - botMs);
+            const multiplier = (userMs / botMs).toFixed(1);
+
+            resultBox.innerHTML = `
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+                    <div>
+                        <span class="text-xs font-black uppercase tracking-wider text-slate-500">Resultado de Velocidad</span>
+                        <h4 class="text-2xl font-black text-slate-900 mt-0.5">BancaBot fue ${multiplier}x veces más rápido que tú</h4>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-center shadow-sm">
+                            <span class="text-[10px] uppercase font-bold text-slate-500 block">Tu Reacción</span>
+                            <span class="text-xl font-black text-rose-600 font-mono">${userMs} ms</span>
+                        </div>
+                        <div class="px-4 py-2 rounded-xl bg-emerald-100 border border-emerald-300 text-center shadow-sm">
+                            <span class="text-[10px] uppercase font-bold text-emerald-800 block">BancaBot</span>
+                            <span class="text-xl font-black text-emerald-700 font-mono">380 ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                    <p>
+                        ⏱️ Tu cerebro tardó <strong>${userMs} milisegundos (${(userMs/1000).toFixed(2)} segundos)</strong> solo en dar un clic simple sobre la pantalla.
+                    </p>
+                    <p class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 font-medium">
+                        ❌ <strong>En el portal del banco es mucho peor:</strong> Tienes que refrescar con la página colgada, esperar que cargue, elegir cuenta en bolívares, cuenta en divisas, tipear el monto y esperar el SMS. Esos <strong>${diffMs} ms de retraso humano</strong> son la razón exacta por la que siempre ves: <em>"Fondos agotados para esta jornada"</em>.
+                    </p>
+                    <p class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 font-semibold">
+                        ⚡ <strong>BancaBot no espera ni duda:</strong> Detecta la apertura en el milisegundo 0.00, inyecta las cuentas en 0.38s y liquida la compra en 0.80s antes de que la página del banco colapse.
+                    </p>
+                </div>
+
+                <div class="mt-6 flex flex-col sm:flex-row items-center gap-3">
+                    <a href="#comprar" class="w-full sm:w-auto bg-sky-600 hover:bg-sky-500 text-white font-extrabold px-6 py-3.5 rounded-xl text-center text-sm shadow-md shadow-sky-600/25 transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>Dejar que BancaBot compre por mí (Desde 30 USDT)</span>
+                    </a>
+                    <button type="button" onclick="testState='idle'; handleArenaClick();" class="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-700 font-bold px-5 py-3.5 rounded-xl border border-slate-300 text-center text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Reintentar mi tiempo</span>
+                    </button>
+                </div>
+            `;
+            resultBox.classList.remove('hidden');
+        }
+
+        // ==========================================
+        // NOTIFICACIONES FLOTANTES DE SOCIAL PROOF (IDEA 2)
+        // ==========================================
+        const recentPurchases = [
+            { city: 'Caracas', plan: 'Licencia Full Pro (8 Bancos)', time: 'hace 8 min' },
+            { city: 'Maracaibo', plan: 'Licencia Mono-Banco (BDV)', time: 'hace 19 min' },
+            { city: 'Valencia', plan: 'Pack Dúo (2 Equipos)', time: 'hace 32 min' },
+            { city: 'Barquisimeto', plan: 'Licencia Full Pro (8 Bancos)', time: 'hace 11 min' },
+            { city: 'San Cristóbal', plan: 'Licencia Mono-Banco (Banesco)', time: 'hace 24 min' },
+            { city: 'Lechería', plan: 'Pack Dúo (2 Equipos)', time: 'hace 41 min' },
+            { city: 'Maracay', plan: 'Licencia Mono-Banco (Tesoro)', time: 'hace 16 min' },
+            { city: 'Maturín', plan: 'Licencia Full Pro (8 Bancos)', time: 'hace 27 min' },
+            { city: 'Puerto Ordaz', plan: 'Licencia Mono-Banco (Bancamiga)', time: 'hace 38 min' },
+            { city: 'Mérida', plan: 'Licencia Full Pro', time: 'hace 6 min' }
+        ];
+
+        let toastIndex = 0;
+        let toastTimeout = null;
+        let toastCycleInterval = null;
+
+        function showNextToast() {
+            const toastEl = document.getElementById('social-toast');
+            const titleEl = document.getElementById('toast-title');
+            const descEl = document.getElementById('toast-desc');
+            const timeEl = document.getElementById('toast-time');
+            if (!toastEl || !titleEl || !descEl || !timeEl) return;
+
+            const purchase = recentPurchases[toastIndex % recentPurchases.length];
+            toastIndex++;
+
+            titleEl.innerText = 'Licencia Activada';
+            descEl.innerHTML = `Alguien en <strong>${purchase.city}</strong> adquirió <strong>${purchase.plan}</strong>`;
+            timeEl.innerText = purchase.time;
+
+            // Slide up & Fade in
+            toastEl.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+            toastEl.classList.add('translate-y-0', 'opacity-100', 'pointer-events-auto');
+
+            // Hide automatically after 4.5 seconds
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                hideToast();
+            }, 4500);
+        }
+
+        function hideToast() {
+            const toastEl = document.getElementById('social-toast');
+            if (!toastEl) return;
+            toastEl.classList.remove('translate-y-0', 'opacity-100', 'pointer-events-auto');
+            toastEl.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+        }
+
+        function dismissToast() {
+            hideToast();
+            clearTimeout(toastTimeout);
+        }
+
+        function initSocialToasts() {
+            // First toast appears after 4.5 seconds
+            setTimeout(() => {
+                showNextToast();
+                // Then cycles every 28 seconds
+                toastCycleInterval = setInterval(showNextToast, 28000);
+            }, 4500);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLiveRates();
+            // Refresh rates every 60 seconds
+            setInterval(loadLiveRates, 60000);
+            // Launch social proof notifications
+            initSocialToasts();
+        });
+    </script>
+
+</body>
+</html>
